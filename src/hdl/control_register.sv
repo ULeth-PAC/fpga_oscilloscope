@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "fixed_point.svh"
+
 `define REG_UA (7'h1C)
 `define REG_UB (7'h1D)
 
@@ -7,16 +7,18 @@
 ///
 /// # Ports
 ///
-///    [std] standard module interface.
-///    [ready] asserted for one clk cycle when conversion sequence is completed
-///    [tp] two phase signals being sampled
-///    [vaux] auxiliary analog inputs.
+///    [clk] system clock.
+///    [reset] synchronous active high reset signal, used to reset the input and outputs of the system.
+///    [ready] used to signal when the bus ITwoPhase is ready to be output.
+///    [analog] four signals representing the four analog inputs.
+///    [ITwoPhase] Values of both analog inputs, being output.
 module control_register(
 
-    IStd.in std,
-    IVaux.in vaux,
+    input logic clk,
+    input logic reset,
+    input analog0_p, analog0_n, analog1_p, analog1_n,
     output logic ready,
-    ITwoPhase.out tp
+    output logic [1:0][11:0]ITwoPhase
 );
     logic [6:0] daddr;
     logic den;
@@ -38,14 +40,14 @@ xadc_wiz_0 xadc_wiz (
   .dwe_in(dwe),            // input wire dwe_in
   .drdy_out(drdy),        // output wire drdy_out
   .do_out(do_out),            // output wire [15 : 0] do_out
-  .dclk_in(std.clk),          // input wire dclk_in
-  .reset_in(std.reset),        // input wire reset_in
+  .dclk_in(clk),          // input wire dclk_in
+  .reset_in(reset),        // input wire reset_in
   .vp_in(1'b0),              // input wire vp_in
   .vn_in(1'b0),              // input wire vn_in
-  .vauxp4(vaux.p4),            // input wire vauxp4
-  .vauxn4(vaux.n4),            // input wire vauxn4
-  .vauxp5(vaux.p5),            // input wire vauxp5
-  .vauxn5(vaux.n5),            // input wire vauxn5
+  .vauxp4(analog0_p),            // input wire vauxp4
+  .vauxn4(analog0_n),            // input wire vauxn4
+  .vauxp5(analog1_p),            // input wire vauxp5
+  .vauxn5(analog1_n),            // input wire vauxn5
   .channel_out(channel),  // output wire [4 : 0] channel_out
   .eoc_out(eoc),          // output wire eoc_out
   .alarm_out(/* Unused */),      // output wire alarm_out
@@ -55,7 +57,7 @@ xadc_wiz_0 xadc_wiz (
 
 assign daddr [6:5] = '0;
 assign daddr [4:0] = channel [4:0];
-assign den =eoc;
+assign den = eoc;
 assign di = '0;
 assign dwe = drdy;
 
@@ -64,8 +66,8 @@ logic [11:0] ub_code;
 
 logic [4:0] prev_channel;
 
-always_ff @ (posedge std.clk) begin
-    if(std.reset) begin
+always_ff @ (posedge clk) begin
+    if(reset) begin
         ua_code <= '0;
         ub_code <= '0;
         prev_channel <= '0;
@@ -79,28 +81,18 @@ always_ff @ (posedge std.clk) begin
     end
 end
 
-logic ready_one_cycle;
-
 //Writes stored ouput when eos is high  in order for the values to be updated at the same time.
-always_ff @ (posedge atd.clk) begin
-    if (std.reset) begin
-        ready_one_cycle <= 0;
-        tp.ua <= `FIX2420_invalid;
-        tp.ub <= `FIX2420_invalid;
+always_ff @ (posedge clk) begin
+    if (reset) begin
+        ready <= 0;
+        ITwoPhase <= '0;  
     end else if (eos) begin
-        ready_one_cycle <=  1;
-        tp.ua.num [23:20] <= {4{ua_code[11]}};
-        tp.ua.num [19:8] <= ua_code;
-        tp.ua.valid <= 1;
-        tp.ub.num [23:20] <= {4{ua_code[11]}};
-        tp.ub.num [19:8] <= ub_code;
-        tp.ub.valid <= 1;
+        ready <=  1;
+        ITwoPhase [0][11:0] <= ua_code;
+        ITwoPhase [1][11:0] <= ub_code;
     end else begin
-    ready_one_cycle <= 0;
+    ready <= 0;
     end
 end
-
-// hold ready signal high for 2 std.clk in order to be read by a clock at half the speed
-hold #(.CYCLES(2)) hold_ready(.std(std), .a(ready_one_cycle), .high(ready));
 
 endmodule
