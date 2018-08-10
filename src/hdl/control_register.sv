@@ -9,16 +9,16 @@
 ///
 ///    [clk] system clock.
 ///    [reset] synchronous active high reset signal, used to reset the input and outputs of the system.
-///    [ready] used to signal when the bus ITwoPhase is ready to be output.
+///    [ready] used to signal when the bus samples_output is ready to be output.
 ///    [analog] four signals representing the four analog inputs.
-///    [ITwoPhase] Values of both analog inputs, being output.
+///    [samples_output] Values of both analog inputs, being output.
 module control_register(
 
     input logic clk,
     input logic reset,
     input analog0_p, analog0_n, analog1_p, analog1_n,
     output logic ready,
-    output logic [1:0][11:0]ITwoPhase
+    output logic [1:0][11:0] samples_output
 );
     logic [6:0] daddr;
     logic den;
@@ -70,7 +70,6 @@ always_ff @ (posedge clk) begin
     if(reset) begin
         ua_code <= '0;
         ub_code <= '0;
-        prev_channel <= '0;
     end 
     else if (eoc) begin
         prev_channel <= channel;
@@ -85,11 +84,11 @@ end
 always_ff @ (posedge clk) begin
     if (reset) begin
         ready <= 0;
-        ITwoPhase <= '0;  
+        samples_output <= '0;  
     end else if (eos) begin
         ready <=  1;
-        ITwoPhase [0][11:0] <= ua_code;
-        ITwoPhase [1][11:0] <= ub_code;
+        samples_output [0][11:0] <= ua_code;
+        samples_output [1][11:0] <= ub_code;
     end else begin
     ready <= 0;
     end
