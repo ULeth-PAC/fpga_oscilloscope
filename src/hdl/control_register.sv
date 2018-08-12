@@ -27,26 +27,23 @@ module control_register(
                        setting6,
                        setting7 );
               
+    logic [7:0] control;
+    
     always_ff @(posedge clk) begin
         if (reset) begin
-            setting0 <= 0;
-            setting1 <= 0;
-            setting2 <= 0;
-            setting3 <= 0;
-            setting4 <= 0;
-            setting5 <= 0;
-            setting6 <= 0;
-            setting7 <= 0;
+            control  <= '0;
         end else if (write) begin
-            setting0 <= write_register[0];
-            setting1 <= write_register[1];
-            setting2 <= write_register[2];
-            setting3 <= write_register[3];
-            setting4 <= write_register[4];
-            setting5 <= write_register[5];
-            setting6 <= write_register[6];
-            setting7 <= write_register[7];
+            control <= write_register;
         end
     end
-
+    
+    assign setting0 = control[0];
+    assign setting1 = control[1];
+    assign setting2 = control[2];
+    assign setting3 = control[3];
+    assign setting4 = control[4];
+    assign setting5 = control[5];
+    assign setting6 = control[6];
+    assign setting7 = control[7];
+    
 endmodule
