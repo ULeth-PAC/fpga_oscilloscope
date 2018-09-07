@@ -8,7 +8,6 @@
 /// *   [reset] is the synchronous active high reset signal.
 /// *   [rx] is the receiving serial line.
 /// *   [tx] is the transmitting serial line.
-/// *   [digital] is a bus of digital inputs for the logic analyzer.
 /// *   [analog_p] is a bus of positive sides of the anlog inputs.
 /// *   [analog_n] is a bus of negative sides of the anlog inputs.
 module main(
@@ -16,14 +15,39 @@ module main(
     input logic reset,
     input logic rx,
     output logic tx,
-    input logic [7:0] digital,
     input logic [1:0] analog_p,
     input logic [1:0] analog_n);
-
-    // TODO Derive clocks using `clk_ref`. `clk_ref` should not be forwarded to
-    //      any other modules because a clock coming from a clock management
-    //      tile will have higher stability.
-
-    // TODO Connect the rest of everything up
-
+    
+    logic [23:0] data;
+    logic settings;
+    logic toggled_on;
+    logic write_ready;
+    
+    usb_communicator usb_communicator (
+        .clk(clk_ref),
+        .reset(reset),
+        .toggled_on(toggled_on),
+        .data(data),
+        .rx(rx),
+        .tx(tx),
+        .control(settings)
+    );
+    
+    control_register control_register(
+        .clk(clk_ref),
+        .reset(reset),
+        .write(write_ready),
+        .write_register(settings),
+        .toggled_on(toggled_on)
+    );
+    
+    signal_reader signal_reader(
+        .clk(clk_ref),
+        .reset(reset),
+        .analog_p(analog_p),
+        .analog_n(analog_n),
+        .ready(write_ready),
+        .analog_out(data)
+    );
+    
 endmodule

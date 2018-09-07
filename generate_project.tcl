@@ -1,3 +1,7 @@
+# Copyright (c) 2018 Adam Christiansen
+# MIT License
+# See LICENSE file
+
 # This script is used to create the Vivado project from everything in the /src
 # directory beside this script
 
